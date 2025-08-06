@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gegana Music Studio POS</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- SheetJS CDN for Excel export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #e2e8f0; /* Light Slate Blue */
+            color: #2d3748; /* Darker text for contrast */
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #cbd5e0; /* Light gray track */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4a5568; /* Darker gray thumb */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #2d3748; /* Even darker on hover */
+        }
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #6366f1;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        /* Modern button styles */
+        .modern-button {
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 0.75rem; /* rounded-xl */
+        }
+        .modern-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+        }
+        .modern-button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Login Page -->
+    <div id="login-page" class="flex items-center justify-center h-screen w-full bg-gradient-to-br from-indigo-700 to-blue-600">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-96 transform transition-all duration-300 hover:scale-105">
+            <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">Login Karyawan</h2>
+            <div class="mb-4">
+                <label for="username" class="block text-gray-700 text-sm font-semibold mb-2">Username</label>
+                <input type="text" id="username" class="shadow-sm appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition duration-200" placeholder="Masukkan username">
+            </div>
+            <div class="mb-6">
+                <label for="password" class="block text-gray-700 text-sm font-semibold mb-2">Password</label>
+                <input type="password" id="password" class="shadow-sm appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition duration-200" placeholder="Masukkan password">
+            </div>
+            <button id="login-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition duration-200 transform hover:scale-105 modern-button">
+                Login
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Application Page -->
+    <div id="main-app" class="hidden flex flex-1">
+        <!-- Sidebar Navigation -->
+        <aside class="w-64 bg-gray-900 text-white p-6 flex flex-col shadow-lg rounded-r-xl">
+            <div class="text-2xl font-bold mb-8 text-center text-indigo-300">Gegana POS</div>
+            <nav class="flex-1">
+                <ul>
+                    <li class="mb-4">
+                        <button id="nav-pos" class="w-full flex items-center p-3 rounded-lg text-left text-lg font-medium hover:bg-gray-700 transition duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                            <i class="fas fa-cash-register mr-3"></i> POS
+                        </button>
+                    </li>
+                    <li class="mb-4">
+                        <button id="nav-booking" class="w-full flex items-center p-3 rounded-lg text-left text-lg font-medium hover:bg-gray-700 transition duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                            <i class="fas fa-calendar-alt mr-3"></i> Booking Studio
+                        </button>
+                    </li>
+                    <li class="mb-4">
+                        <button id="nav-stock" class="w-full flex items-center p-3 rounded-lg text-left text-lg font-medium hover:bg-gray-700 transition duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                            <i class="fas fa-boxes mr-3"></i> Manajemen Stok
+                        </button>
+                    </li>
+                    <li class="mb-4">
+                        <button id="nav-reports" class="w-full flex items-center p-3 rounded-lg text-left text-lg font-medium hover:bg-gray-700 transition duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                            <i class="fas fa-chart-line mr-3"></i> Laporan
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+            <div class="mt-auto pt-6 border-t border-gray-700">
+                <div class="text-sm text-gray-400 mb-2">Login sebagai: <span id="logged-in-user" class="font-semibold text-indigo-200"></span></div>
+                <button id="logout-button" class="w-full flex items-center p-3 rounded-lg text-left text-lg font-medium bg-red-600 hover:bg-red-700 transition duration-200 focus:outline-none focus:ring-2 focus:ring-red-400 modern-button">
+                    <i class="fas fa-sign-out-alt mr-3"></i> Logout
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 p-8 overflow-y-auto">
+            <!-- POS Section -->
+            <section id="pos-section" class="bg-white p-8 rounded-xl shadow-lg mb-8">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6 flex items-center"><i class="fas fa-cash-register mr-3 text-indigo-500"></i> Point of Sales</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Product Buttons -->
+                    <div class="lg:col-span-2">
+                        <h3 class="text-2xl font-semibold text-gray-700 mb-4">Pilih Item</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <button class="product-button bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-6 rounded-lg shadow-md transition duration-200 transform hover:scale-105 modern-button" data-item-type="product" data-item-name="Kopi" data-item-price="5000">
+                                Kopi <br> Rp 5.000
+                            </button>
+                            <button class="product-button bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-6 rounded-lg shadow-md transition duration-200 transform hover:scale-105 modern-button" data-item-type="product" data-item-name="Teh" data-item-price="5000">
+                                Teh <br> Rp 5.000
+                            </button>
+                            <button class="product-button bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-6 rounded-lg shadow-md transition duration-200 transform hover:scale-105 modern-button" data-item-type="product" data-item-name="Air Putih" data-item-price="5000">
+                                Air Putih <br> Rp 5.000
+                            </button>
+                            <button class="product-button bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-lg shadow-md transition duration-200 transform hover:scale-105 modern-button" data-item-type="product" data-item-name="Stick Drum" data-item-price="25000">
+                                Stick Drum <br> Rp 25.000
+                            </button>
+                            <button class="product-button bg-red-500 hover:bg-red-600 text-white font-bold py-4 px-6 rounded-lg shadow-md transition duration-200 transform hover:scale-105 modern-button" data-item-type="fine" data-item-name="Denda Senar Bass" data-item-price="50000">
+                                Denda Senar Bass <br> Rp 50.000
+                            </button>
+                            <button class="product-button bg-red-500 hover:bg-red-600 text-white font-bold py-4 px-6 rounded-lg shadow-md transition duration-200 transform hover:scale-105 modern-button" data-item-type="fine" data-item-name="Denda Senar Gitar" data-item-price="10000">
+                                Denda Senar Gitar <br> Rp 10.000
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Cart Summary -->
+                    <div class="lg:col-span-1 bg-gray-50 p-6 rounded-lg shadow-inner">
+                        <h3 class="text-2xl font-semibold text-gray-700 mb-4">Keranjang Belanja</h3>
+                        <div id="cart-items" class="mb-4 max-h-60 overflow-y-auto border-b pb-4 border-gray-200">
+                            <!-- Cart items will be rendered here -->
+                            <p class="text-gray-500 text-center py-4">Keranjang kosong.</p>
+                        </div>
+                        <div class="flex justify-between items-center text-xl font-bold text-gray-800 mb-6">
+                            <span>Total:</span>
+                            <span id="cart-total">Rp 0</span>
+                        </div>
+                        <button id="checkout-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition duration-200 transform hover:scale-105 modern-button">
+                            Bayar
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Booking Studio Section -->
+            <section id="booking-section" class="hidden bg-white p-8 rounded-xl shadow-lg mb-8">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6 flex items-center"><i class="fas fa-calendar-alt mr-3 text-green-500"></i> Booking Studio</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="booking-date" class="block text-gray-700 text-sm font-semibold mb-2">Tanggal Booking</label>
+                        <input type="date" id="booking-date" class="shadow-sm appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-green-500 transition duration-200">
+                    </div>
+                    <div>
+                        <label for="customer-name" class="block text-gray-700 text-sm font-semibold mb-2">Nama Penyewa</label>
+                        <input type="text" id="customer-name" class="shadow-sm appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-green-500 transition duration-200" placeholder="Nama Penyewa">
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <h3 class="text-xl font-semibold text-gray-700 mb-4">Pilih Slot Waktu (2 jam / sesi)</h3>
+                    <div id="time-slots" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                        <!-- Time slots will be generated here -->
+                    </div>
+                </div>
+                <button id="add-booking-to-cart" class="mt-8 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition duration-200 transform hover:scale-105 modern-button">
+                    Tambahkan Booking ke Keranjang
+                </button>
+            </section>
+
+            <!-- Stock Management Section -->
+            <section id="stock-section" class="hidden bg-white p-8 rounded-xl shadow-lg mb-8">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6 flex items-center"><i class="fas fa-boxes mr-3 text-yellow-500"></i> Manajemen Stok</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-700 mb-4">Minuman</h3>
+                        <div class="space-y-4" id="drink-stock-inputs">
+                            <!-- Drink stock inputs will be generated here -->
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-700 mb-4">Aksesoris</h3>
+                        <div class="space-y-4" id="accessory-stock-inputs">
+                            <!-- Accessory stock inputs will be generated here -->
+                        </div>
+                    </div>
+                </div>
+                <button id="update-stock-button" class="mt-8 bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-6 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-opacity-50 transition duration-200 transform hover:scale-105 modern-button">
+                    Update Stok
+                </button>
+            </section>
+
+            <!-- Reports Section -->
+            <section id="reports-section" class="hidden bg-white p-8 rounded-xl shadow-lg mb-8">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6 flex items-center"><i class="fas fa-chart-line mr-3 text-indigo-500"></i> Laporan</h2>
+
+                <h3 class="text-2xl font-semibold text-gray-700 mb-4">Riwayat Transaksi</h3>
+                <div class="mb-6 overflow-x-auto">
+                    <table class="min-w-full bg-white rounded-lg shadow-md">
+                        <thead>
+                            <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                                <th class="py-3 px-6 text-left rounded-tl-lg">ID Transaksi</th>
+                                <th class="py-3 px-6 text-left">Tanggal & Waktu</th>
+                                <th class="py-3 px-6 text-left">Karyawan</th>
+                                <th class="py-3 px-6 text-left">Item</th>
+                                <th class="py-3 px-6 text-left">Total</th>
+                                <th class="py-3 px-6 text-left">Metode Bayar</th>
+                                <th class="py-3 px-6 text-left">Status</th>
+                                <th class="py-3 px-6 text-center rounded-tr-lg">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transaction-list" class="text-gray-700 text-sm font-light">
+                            <!-- Transactions will be rendered here -->
+                        </tbody>
+                    </table>
+                </div>
+                <button id="export-transactions-excel" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition duration-200 transform hover:scale-105 modern-button mb-8">
+                    Export Transaksi ke Excel
+                </button>
+
+                <h3 class="text-2xl font-semibold text-gray-700 mb-4">Presensi Karyawan</h3>
+                <div class="mb-6 overflow-x-auto">
+                    <table class="min-w-full bg-white rounded-lg shadow-md">
+                        <thead>
+                            <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                                <th class="py-3 px-6 text-left rounded-tl-lg">Karyawan</th>
+                                <th class="py-3 px-6 text-left">Waktu Login</th>
+                                <th class="py-3 px-6 text-left">Waktu Logout</th>
+                                <th class="py-3 px-6 text-left rounded-tr-lg">Shift</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendance-list" class="text-gray-700 text-sm font-light">
+                            <!-- Attendance will be rendered here -->
+                        </tbody>
+                    </table>
+                </div>
+                <button id="export-attendance-excel" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition duration-200 transform hover:scale-105 modern-button">
+                    Export Presensi ke Excel
+                </button>
+            </section>
+        </main>
+    </div>
+
+    <!-- Payment Modal -->
+    <div id="payment-modal" class="hidden fixed inset-0 flex items-center justify-center z-50 modal-overlay">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md transform transition-all duration-300 scale-95 opacity-0" id="payment-modal-content">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Pembayaran</h2>
+            <div class="mb-4">
+                <p class="text-gray-700 text-lg mb-2">Total yang harus dibayar:</p>
+                <p id="payment-total-display" class="text-4xl font-extrabold text-indigo-600 text-center mb-6">Rp 0</p>
+            </div>
+            <div class="grid grid-cols-1 gap-4 mb-6">
+                <button class="payment-method-button bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-200 transform hover:scale-105 modern-button" data-method="Cash">
+                    <i class="fas fa-money-bill-wave mr-2"></i> Tunai
+                </button>
+                <button class="payment-method-button bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-200 transform hover:scale-105 modern-button" data-method="Transfer">
+                    <i class="fas fa-exchange-alt mr-2"></i> Transfer
+                </button>
+                <button class="payment-method-button bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-200 transform hover:scale-105 modern-button" data-method="QRIS">
+                    <i class="fas fa-qrcode mr-2"></i> QRIS
+                </button>
+            </div>
+            <button id="close-payment-modal" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 px-6 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-200 transform hover:scale-105 modern-button">
+                Batal
+            </button>
+        </div>
+    </div>
+
+    <!-- Confirmation/Alert Modal -->
+    <div id="alert-modal" class="hidden fixed inset-0 flex items-center justify-center z-50 modal-overlay">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-sm transform transition-all duration-300 scale-95 opacity-0" id="alert-modal-content">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4" id="alert-title"></h3>
+            <p class="text-gray-700 mb-6" id="alert-message"></p>
+            <div class="flex justify-end space-x-4">
+                <button id="alert-cancel-button" class="hidden bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-200 modern-button">Batal</button>
+                <button id="alert-confirm-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition duration-200 modern-button">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Data Karyawan (shift will be determined dynamically on login)
+        const employees = [
+            { name: 'Dibta' },
+            { name: 'Nano' },
+            { name: 'Mateo' },
+            { name: 'Gandhi' },
+            { name: 'Santi' },
+        ];
+
+        // Product and Fine Data
+        const products = [
+            { name: 'Kopi', price: 5000, type: 'drink' },
+            { name: 'Teh', price: 5000, type: 'drink' },
+            { name: 'Air Putih', price: 5000, type: 'drink' },
+            { name: 'Stick Drum', price: 25000, type: 'accessory' },
+        ];
+
+        const fines = [
+            { name: 'Denda Senar Bass', price: 50000 },
+            { name: 'Denda Senar Gitar', price: 10000 },
+        ];
+
+        const studioPrice = 85000; // Studio rent price per 2 hours
+
+        // Application State (all data now stored in localStorage)
+        let loggedInUser = null;
+        let currentCart = [];
+        let transactions = [];
+        let stock = {};
+        let attendance = [];
+        let bookedStudioSlots = []; // Still used for local display of booked slots
+
+        // DOM Elements
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loginPage = document.getElementById('login-page');
+        const mainApp = document.getElementById('main-app');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const loginButton = document.getElementById('login-button');
+        const loggedInUserSpan = document.getElementById('logged-in-user');
+        const logoutButton = document.getElementById('logout-button');
+
+        const navPos = document.getElementById('nav-pos');
+        const navBooking = document.getElementById('nav-booking');
+        const navStock = document.getElementById('nav-stock');
+        const navReports = document.getElementById('nav-reports');
+
+        const posSection = document.getElementById('pos-section');
+        const bookingSection = document.getElementById('booking-section');
+        const stockSection = document.getElementById('stock-section');
+        const reportsSection = document.getElementById('reports-section');
+
+        const cartItemsContainer = document.getElementById('cart-items');
+        const cartTotalDisplay = document.getElementById('cart-total');
+        const checkoutButton = document.getElementById('checkout-button');
+        const productButtons = document.querySelectorAll('.product-button');
+
+        const bookingDateInput = document.getElementById('booking-date');
+        const customerNameInput = document.getElementById('customer-name');
+        const timeSlotsContainer = document.getElementById('time-slots');
+        const addBookingToCartButton = document.getElementById('add-booking-to-cart');
+
+        const drinkStockInputsContainer = document.getElementById('drink-stock-inputs');
+        const accessoryStockInputsContainer = document.getElementById('accessory-stock-inputs');
+        const updateStockButton = document.getElementById('update-stock-button');
+
+        const transactionListBody = document.getElementById('transaction-list');
+        const attendanceListBody = document.getElementById('attendance-list');
+        const exportTransactionsExcelButton = document.getElementById('export-transactions-excel');
+        const exportAttendanceExcelButton = document.getElementById('export-attendance-excel');
+
+        const paymentModal = document.getElementById('payment-modal');
+        const paymentModalContent = document.getElementById('payment-modal-content');
+        const paymentTotalDisplay = document.getElementById('payment-total-display');
+        const paymentMethodButtons = document.querySelectorAll('.payment-method-button');
+        const closePaymentModalButton = document.getElementById('close-payment-modal');
+
+        const alertModal = document.getElementById('alert-modal');
+        const alertModalContent = document.getElementById('alert-modal-content');
+        const alertTitle = document.getElementById('alert-title');
+        const alertMessage = document.getElementById('alert-message');
+        const alertConfirmButton = document.getElementById('alert-confirm-button');
+        const alertCancelButton = document.getElementById('alert-cancel-button');
+
+        // --- Utility Functions ---
+
+        /**
+         * Shows the loading overlay.
+         */
+        function showLoading() {
+            loadingOverlay.classList.remove('hidden');
+        }
+
+        /**
+         * Hides the loading overlay.
+         */
+        function hideLoading() {
+            loadingOverlay.classList.add('hidden');
+        }
+
+        /**
+         * Formats a number as Rupiah currency.
+         * @param {number} amount - The amount of money.
+         * @returns {string} Formatted Rupiah string.
+         */
+        function formatRupiah(amount) {
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0
+            }).format(amount);
+        }
+
+        /**
+         * Gets the current date and time in a readable format.
+         * @returns {string} Current date and time.
+         */
+        function getCurrentDateTime() {
+            const now = new Date();
+            const options = {
+                year: 'numeric', month: 'long', day: 'numeric',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                hour12: false
+            };
+            return now.toLocaleString('id-ID', options);
+        }
+
+        /**
+         * Generates a simple unique ID for localStorage entries.
+         * @returns {string} Unique ID.
+         */
+        function generateUniqueId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        /**
+         * Displays a custom modal (alert/confirmation).
+         * @param {string} title - Modal title.
+         * @param {string} message - Modal message.
+         * @param {boolean} isConfirm - Whether it's a confirmation modal (true) or alert (false).
+         * @returns {Promise<boolean>} Resolves true if confirmed, false if cancelled.
+         */
+        function showAlert(title, message, isConfirm = false) {
+            return new Promise((resolve) => {
+                alertTitle.textContent = title;
+                alertMessage.textContent = message;
+
+                if (isConfirm) {
+                    alertCancelButton.classList.remove('hidden');
+                    alertConfirmButton.textContent = 'Ya';
+                    alertConfirmButton.className = 'bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 transition duration-200 modern-button';
+                } else {
+                    alertCancelButton.classList.add('hidden');
+                    alertConfirmButton.textContent = 'OK';
+                    alertConfirmButton.className = 'bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition duration-200 modern-button';
+                }
+
+                alertModal.classList.remove('hidden');
+                setTimeout(() => {
+                    alertModalContent.classList.remove('opacity-0', 'scale-95');
+                    alertModalContent.classList.add('opacity-100', 'scale-100');
+                }, 10); // Small delay for animation
+
+                const confirmHandler = () => {
+                    alertModalContent.classList.remove('opacity-100', 'scale-100');
+                    alertModalContent.classList.add('opacity-0', 'scale-95');
+                    setTimeout(() => alertModal.classList.add('hidden'), 300);
+                    alertConfirmButton.removeEventListener('click', confirmHandler);
+                    alertCancelButton.removeEventListener('click', cancelHandler);
+                    resolve(true);
+                };
+
+                const cancelHandler = () => {
+                    alertModalContent.classList.remove('opacity-100', 'scale-100');
+                    alertModalContent.classList.add('opacity-0', 'scale-95');
+                    setTimeout(() => alertModal.classList.add('hidden'), 300);
+                    alertConfirmButton.removeEventListener('click', confirmHandler);
+                    alertCancelButton.removeEventListener('click', cancelHandler);
+                    resolve(false);
+                };
+
+                alertConfirmButton.addEventListener('click', confirmHandler);
+                alertCancelButton.addEventListener('click', cancelHandler);
+            });
+        }
+
+        // --- Local Storage Management ---
+
+        /**
+         * Loads data from localStorage.
+         * @param {string} key - The key for localStorage.
+         * @param {any} defaultValue - Default value if key not found.
+         * @returns {any} Parsed data or default value.
+         */
+        function loadFromLocalStorage(key, defaultValue) {
+            try {
+                const data = localStorage.getItem(key);
+                return data ? JSON.parse(data) : defaultValue;
+            } catch (e) {
+                console.error(`Error loading from localStorage for key ${key}:`, e);
+                return defaultValue;
+            }
+        }
+
+        /**
+         * Saves data to localStorage.
+         * @param {string} key - The key for localStorage.
+         * @param {any} data - Data to save.
+         */
+        function saveToLocalStorage(key, data) {
+            try {
+                localStorage.setItem(key, JSON.stringify(data));
+            } catch (e) {
+                console.error(`Error saving to localStorage for key ${key}:`, e);
+            }
+        }
+
+        /**
+         * Initializes application data from localStorage or default values.
+         */
+        function initializeAppData() {
+            transactions = loadFromLocalStorage('transactions', []);
+            stock = loadFromLocalStorage('stock', initializeStockData());
+            attendance = loadFromLocalStorage('attendance', []);
+            bookedStudioSlots = loadFromLocalStorage('bookedStudioSlots', []);
+            // loggedInUser is not persisted directly, it's set on login
+        }
+
+        /**
+         * Initializes initial stock data if not present in localStorage.
+         * @returns {object} Initial stock object.
+         */
+        function initializeStockData() {
+            const initialStock = {};
+            products.forEach(p => {
+                if (p.type === 'drink' || p.type === 'accessory') {
+                    initialStock[p.name] = 10; // Initial stock 10 for all drinks and drum sticks
+                }
+            });
+            return initialStock;
+        }
+
+        // --- Login & Logout ---
+
+        /**
+         * Displays the login page.
+         */
+        function showLoginPage() {
+            loginPage.classList.remove('hidden');
+            mainApp.classList.add('hidden');
+            usernameInput.value = '';
+            passwordInput.value = '';
+            hideLoading(); // Ensure loading is hidden on login page
+        }
+
+        /**
+         * Displays the main application after successful login.
+         */
+        function showMainApp() {
+            loginPage.classList.add('hidden');
+            mainApp.classList.remove('hidden');
+            loggedInUserSpan.textContent = loggedInUser.name;
+            showSection('pos'); // Display POS section by default
+            renderCart();
+            renderStockInputs(); // Render stock inputs with current data
+            renderTransactions(); // Render transactions with current data
+            renderAttendance(); // Render attendance with current data
+            generateTimeSlots(); // Render time slots with current booking data
+            hideLoading(); // Ensure loading is hidden after app loads
+        }
+
+        /**
+         * Handles employee login process.
+         */
+        loginButton.addEventListener('click', async () => {
+            showLoading();
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value.trim();
+
+            const employee = employees.find(emp => emp.name.toLowerCase() === username.toLowerCase() && emp.name.toLowerCase() === password.toLowerCase());
+
+            if (employee) {
+                const now = new Date();
+                const currentHour = now.getHours();
+                let assignedShift = '';
+
+                if (currentHour >= 11 && currentHour < 18) { // 11:00 to 17:59:59
+                    assignedShift = 'Shift 1 (11.00-18.00)';
+                } else if (currentHour >= 18 || currentHour < 1) { // 18:00 to 00:59:59 (next day)
+                    assignedShift = 'Shift 2 (18.00-01.00)';
+                } else {
+                    assignedShift = 'Di Luar Jam Kerja'; // For hours outside defined shifts
+                }
+
+                loggedInUser = {
+                    name: employee.name,
+                    shift: assignedShift,
+                    loginTime: getCurrentDateTime()
+                };
+
+                // Check if there's an active session for this user
+                const activeAttendanceIndex = attendance.findIndex(att => att.name === loggedInUser.name && att.logoutTime === null);
+
+                if (activeAttendanceIndex === -1) {
+                    // No active session, add new attendance record
+                    attendance.push({ ...loggedInUser, id: generateUniqueId() });
+                } else {
+                    // User already logged in, update existing record
+                    attendance[activeAttendanceIndex].loginTime = loggedInUser.loginTime;
+                    attendance[activeAttendanceIndex].shift = assignedShift;
+                }
+                saveToLocalStorage('attendance', attendance);
+                showMainApp();
+            } else {
+                hideLoading();
+                showAlert('Login Gagal', 'Username atau password salah. Pastikan username dan password sama dengan nama karyawan.');
+            }
+        });
+
+        /**
+         * Handles employee logout process.
+         */
+        logoutButton.addEventListener('click', async () => {
+            const confirmLogout = await showAlert('Konfirmasi Logout', 'Apakah Anda yakin ingin logout?', true);
+            if (confirmLogout) {
+                showLoading();
+                if (loggedInUser) {
+                    const activeAttendanceIndex = attendance.findIndex(att => att.name === loggedInUser.name && att.logoutTime === null);
+                    if (activeAttendanceIndex !== -1) {
+                        attendance[activeAttendanceIndex].logoutTime = getCurrentDateTime();
+                        saveToLocalStorage('attendance', attendance);
+                    }
+                }
+                loggedInUser = null;
+                currentCart = []; // Clear cart on logout
+                showLoginPage();
+            }
+        });
+
+        // --- Navigation ---
+
+        /**
+         * Displays the selected application section.
+         * @param {string} sectionId - ID of the section to display (pos, booking, stock, reports).
+         */
+        function showSection(sectionId) {
+            posSection.classList.add('hidden');
+            bookingSection.classList.add('hidden');
+            stockSection.classList.add('hidden');
+            reportsSection.classList.add('hidden');
+
+            // Remove active styles from all nav buttons
+            document.querySelectorAll('nav button').forEach(button => {
+                button.classList.remove('bg-gray-700');
+            });
+
+            switch (sectionId) {
+                case 'pos':
+                    posSection.classList.remove('hidden');
+                    navPos.classList.add('bg-gray-700');
+                    break;
+                case 'booking':
+                    bookingSection.classList.remove('hidden');
+                    navBooking.classList.add('bg-gray-700');
+                    generateTimeSlots(); // Regenerate time slots when booking section is shown
+                    break;
+                case 'stock':
+                    stockSection.classList.remove('hidden');
+                    navStock.classList.add('bg-gray-700');
+                    renderStockInputs(); // Render stock inputs with current data
+                    break;
+                case 'reports':
+                    reportsSection.classList.remove('hidden');
+                    navReports.classList.add('bg-gray-700');
+                    renderTransactions(); // Render transactions with current data
+                    renderAttendance(); // Render attendance with current data
+                    break;
+            }
+        }
+
+        navPos.addEventListener('click', () => showSection('pos'));
+        navBooking.addEventListener('click', () => showSection('booking'));
+        navStock.addEventListener('click', () => showSection('stock'));
+        navReports.addEventListener('click', () => showSection('reports'));
+
+        // --- POS Logic ---
+
+        /**
+         * Renders items in the shopping cart.
+         */
+        function renderCart() {
+            cartItemsContainer.innerHTML = '';
+            if (currentCart.length === 0) {
+                cartItemsContainer.innerHTML = '<p class="text-gray-500 text-center py-4">Keranjang kosong.</p>';
+                cartTotalDisplay.textContent = formatRupiah(0);
+                checkoutButton.disabled = true;
+                checkoutButton.classList.add('opacity-50', 'cursor-not-allowed');
+                return;
+            }
+
+            let total = 0;
+            currentCart.forEach((item, index) => {
+                total += item.price * item.quantity;
+                const itemElement = document.createElement('div');
+                itemElement.className = 'flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0';
+                itemElement.innerHTML = `
+                    <div class="flex-1">
+                        <p class="font-medium text-gray-800">${item.name}</p>
+                        <p class="text-sm text-gray-500">${formatRupiah(item.price)} x ${item.quantity}</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button class="quantity-btn text-blue-500 hover:text-blue-700" data-index="${index}" data-action="decrease">
+                            <i class="fas fa-minus-circle"></i>
+                        </button>
+                        <span class="font-semibold text-gray-800">${item.quantity}</span>
+                        <button class="quantity-btn text-blue-500 hover:text-blue-700" data-index="${index}" data-action="increase">
+                            <i class="fas fa-plus-circle"></i>
+                        </button>
+                        <button class="remove-from-cart-btn text-red-500 hover:text-red-700 ml-2" data-index="${index}">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                `;
+                cartItemsContainer.appendChild(itemElement);
+            });
+
+            cartTotalDisplay.textContent = formatRupiah(total);
+            checkoutButton.disabled = false;
+            checkoutButton.classList.remove('opacity-50', 'cursor-not-allowed');
+
+            // Add event listeners for quantity and remove buttons
+            cartItemsContainer.querySelectorAll('.quantity-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const index = parseInt(e.currentTarget.dataset.index);
+                    const action = e.currentTarget.dataset.action;
+                    updateItemQuantity(index, action);
+                });
+            });
+
+            cartItemsContainer.querySelectorAll('.remove-from-cart-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const index = parseInt(e.currentTarget.dataset.index);
+                    removeItemFromCart(index);
+                });
+            });
+        }
+
+        /**
+         * Adds an item to the shopping cart.
+         * @param {object} item - The item object to add.
+         */
+        function addItemToCart(item) {
+            const existingItemIndex = currentCart.findIndex(cartItem => cartItem.name === item.name);
+
+            if (existingItemIndex > -1) {
+                currentCart[existingItemIndex].quantity++;
+            } else {
+                currentCart.push({ ...item, quantity: 1 });
+            }
+            renderCart();
+        }
+
+        /**
+         * Updates the quantity of an item in the cart.
+         * @param {number} index - Index of the item in the cart.
+         * @param {string} action - 'increase' or 'decrease'.
+         */
+        function updateItemQuantity(index, action) {
+            if (action === 'increase') {
+                currentCart[index].quantity++;
+            } else if (action === 'decrease') {
+                currentCart[index].quantity--;
+                if (currentCart[index].quantity <= 0) {
+                    removeItemFromCart(index);
+                    return;
+                }
+            }
+            renderCart();
+        }
+
+        /**
+         * Removes an item from the shopping cart.
+         * @param {number} index - Index of the item to remove.
+         */
+        function removeItemFromCart(index) {
+            currentCart.splice(index, 1);
+            renderCart();
+        }
+
+        // Event listener for product/fine buttons
+        productButtons.forEach(button => {
+            button.addEventListener('click', async (e) => {
+                if (!loggedInUser) {
+                    showAlert('Login Diperlukan', 'Mohon login sebagai karyawan terlebih dahulu untuk melakukan transaksi.');
+                    return;
+                }
+                const itemType = e.currentTarget.dataset.itemType;
+                const itemName = e.currentTarget.dataset.itemName;
+                const itemPrice = parseInt(e.currentTarget.dataset.itemPrice);
+
+                let itemToAdd = { name: itemName, price: itemPrice };
+
+                // Handle stock for drinks and accessories
+                if (itemType === 'product' && (itemName === 'Kopi' || itemName === 'Teh' || itemName === 'Air Putih' || itemName === 'Stick Drum')) {
+                    if (stock[itemName] && stock[itemName] > 0) {
+                        stock[itemName]--; // Decrement stock
+                        addItemToCart(itemToAdd);
+                        saveToLocalStorage('stock', stock); // Save updated stock
+                    } else {
+                        showAlert('Stok Habis', `Maaf, stok ${itemName} sudah habis.`);
+                    }
+                } else {
+                    addItemToCart(itemToAdd);
+                }
+            });
+        });
+
+        // --- Checkout & Payment Modal ---
+
+        /**
+         * Displays the payment modal.
+         */
+        checkoutButton.addEventListener('click', () => {
+            if (!loggedInUser) {
+                showAlert('Login Diperlukan', 'Mohon login sebagai karyawan terlebih dahulu untuk melakukan transaksi.');
+                return;
+            }
+            if (currentCart.length === 0) {
+                showAlert('Keranjang Kosong', 'Tidak ada item di keranjang untuk dibayar.');
+                return;
+            }
+            const total = currentCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            paymentTotalDisplay.textContent = formatRupiah(total);
+            paymentModal.classList.remove('hidden');
+            setTimeout(() => {
+                paymentModalContent.classList.remove('opacity-0', 'scale-95');
+                paymentModalContent.classList.add('opacity-100', 'scale-100');
+            }, 10);
+        });
+
+        /**
+         * Closes the payment modal.
+         */
+        closePaymentModalButton.addEventListener('click', () => {
+            paymentModalContent.classList.remove('opacity-100', 'scale-100');
+            paymentModalContent.classList.add('opacity-0', 'scale-95');
+            setTimeout(() => paymentModal.classList.add('hidden'), 300);
+        });
+
+        /**
+         * Processes payment and saves transaction to localStorage.
+         * Also decrements product stock and marks studio slots as booked.
+         */
+        paymentMethodButtons.forEach(button => {
+            button.addEventListener('click', async (e) => {
+                showLoading();
+                const paymentMethod = e.currentTarget.dataset.method;
+                const total = currentCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+                const transactionData = {
+                    id: generateUniqueId(), // Generate unique ID for transaction
+                    timestamp: getCurrentDateTime(),
+                    employee: loggedInUser ? loggedInUser.name : 'Unknown',
+                    items: JSON.parse(JSON.stringify(currentCart)), // Deep copy current cart
+                    total: total,
+                    paymentMethod: paymentMethod,
+                    status: 'Completed'
+                };
+
+                // Stock update is now handled when adding to cart.
+                // No need to decrement stock again here.
+
+                // Handle studio booking and mark slot as booked in localStorage
+                const newBookedSlots = [...bookedStudioSlots];
+                for (let i = 0; i < transactionData.items.length; i++) {
+                    const item = transactionData.items[i];
+                    if (item.type === 'studio_booking') {
+                        const match = item.name.match(/\(([^)]+)\s([^)]+)\)-/); // Extract date and time from name
+                        if (match && match[1] && match[2]) {
+                            const [datePart, timeRange] = match[1].split(' ');
+                            const [startTime, endTime] = timeRange.split('-');
+
+                            const bookedSlotId = generateUniqueId();
+                            newBookedSlots.push({
+                                id: bookedSlotId,
+                                date: datePart,
+                                startTime: startTime,
+                                endTime: endTime,
+                                customerName: item.name.split(' - ')[1], // Extract customer name
+                                transactionId: transactionData.id,
+                                status: 'booked',
+                                bookedAt: getCurrentDateTime()
+                            });
+                            transactionData.items[i].bookedSlotId = bookedSlotId;
+                        }
+                    }
+                }
+                bookedStudioSlots = newBookedSlots; // Update global booked slots state
+                saveToLocalStorage('bookedStudioSlots', bookedStudioSlots); // Save updated booked slots to localStorage
+
+                transactions.push(transactionData); // Add transaction to global array
+                saveToLocalStorage('transactions', transactions); // Save updated transactions to localStorage
+
+                currentCart = []; // Clear local cart
+                renderCart();
+                closePaymentModalButton.click(); // Close payment modal
+                await showAlert('Pembayaran Berhasil!', `Transaksi berhasil dengan total ${formatRupiah(total)} menggunakan metode ${paymentMethod}.`);
+                hideLoading();
+                // Re-render sections to reflect changes
+                renderStockInputs();
+                renderTransactions();
+                generateTimeSlots();
+            });
+        });
+
+        // --- Booking Studio Logic ---
+
+        /**
+         * Initializes the booking date input with today's date.
+         */
+        function initializeBookingDate() {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0'); // Months start at 0!
+            const dd = String(today.getDate()).padStart(2, '0');
+            bookingDateInput.value = `${yyyy}-${mm}-${dd}`;
+        }
+
+        /**
+         * Generates studio time slots based on the selected date and current booked slots.
+         */
+        function generateTimeSlots() {
+            timeSlotsContainer.innerHTML = '';
+            const selectedDate = bookingDateInput.value;
+            if (!selectedDate) return;
+
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+
+            let startTime = 11; // 11:00
+            let endTime = 25; // 01:00 (next day, represented as 25:00 for calculation)
+
+            for (let i = startTime; i < endTime; i += 2) {
+                const startHour = i;
+                const endHour = i + 2;
+                const slotText = `${String(startHour).padStart(2, '0')}:00 - ${String(endHour % 24).padStart(2, '0')}:00`;
+
+                const slotDateTime = new Date(`${selectedDate}T${String(startHour).padStart(2, '0')}:00:00`);
+
+                // Check if the slot is in the past relative to current time AND selected date
+                let isPast = false;
+                if (selectedDate === todayStr) {
+                    // If it's today, compare with current time
+                    if (startHour < currentHour || (startHour === currentHour && 0 < currentMinute)) { // 0 is the minute of slot start, compare with current minute
+                        isPast = true;
+                    }
+                } else if (new Date(selectedDate) < new Date(todayStr)) {
+                    // If the date itself is in the past
+                    isPast = true;
+                }
+
+                // Check if this slot is booked in localStorage
+                const isBooked = bookedStudioSlots.some(bookedSlot =>
+                    bookedSlot.date === selectedDate &&
+                    bookedSlot.startTime === `${String(startHour).padStart(2, '0')}:00` &&
+                    bookedSlot.endTime === `${String(endHour % 24).padStart(2, '0')}:00` &&
+                    bookedSlot.status === 'booked'
+                );
+
+                const slotButton = document.createElement('button');
+                slotButton.textContent = slotText;
+                slotButton.dataset.startTime = `${String(startHour).padStart(2, '0')}:00`;
+                slotButton.dataset.endTime = `${String(endHour % 24).padStart(2, '0')}:00`;
+                slotButton.dataset.date = selectedDate; // Store date in dataset for easy access
+
+                if (isPast) {
+                    slotButton.disabled = true;
+                    slotButton.classList.add('bg-gray-300', 'text-gray-600', 'cursor-not-allowed', 'opacity-70', 'font-semibold', 'py-3', 'px-4', 'rounded-lg', 'shadow-md');
+                    slotButton.textContent += ' (Lewat)';
+                } else if (isBooked) {
+                    slotButton.disabled = true;
+                    slotButton.classList.add('bg-red-500', 'text-white', 'cursor-not-allowed', 'opacity-70', 'font-semibold', 'py-3', 'px-4', 'rounded-lg', 'shadow-md');
+                    slotButton.textContent += ' (Booked)';
+                } else {
+                    slotButton.classList.add('bg-blue-100', 'text-blue-800', 'hover:bg-blue-200', 'focus:outline-none', 'focus:ring-2', 'focus:ring-blue-500', 'font-semibold', 'py-3', 'px-4', 'rounded-lg', 'shadow-md', 'transition', 'duration-200', 'time-slot-button');
+                    slotButton.addEventListener('click', (e) => {
+                        // Remove highlight from other slots
+                        document.querySelectorAll('.time-slot-button').forEach(btn => {
+                            if (!btn.disabled) { // Only remove highlight from available slots
+                                btn.classList.remove('bg-blue-500', 'text-white');
+                                btn.classList.add('bg-blue-100', 'text-blue-800');
+                            }
+                        });
+                        // Highlight selected slot
+                        e.currentTarget.classList.remove('bg-blue-100', 'text-blue-800');
+                        e.currentTarget.classList.add('bg-blue-500', 'text-white');
+                    });
+                }
+                timeSlotsContainer.appendChild(slotButton);
+            }
+        }
+
+        // Event listener for booking date change
+        bookingDateInput.addEventListener('change', generateTimeSlots);
+
+        /**
+         * Adds a studio booking to the cart.
+         */
+        addBookingToCartButton.addEventListener('click', async () => {
+            if (!loggedInUser) {
+                showAlert('Login Diperlukan', 'Mohon login sebagai karyawan terlebih dahulu untuk melakukan booking.');
+                return;
+            }
+
+            const selectedDate = bookingDateInput.value;
+            const customerName = customerNameInput.value.trim();
+            const selectedSlotButton = document.querySelector('.time-slot-button.bg-blue-500');
+
+            if (!selectedDate || !customerName) {
+                showAlert('Data Kurang', 'Mohon isi tanggal booking dan nama penyewa.');
+                return;
+            }
+            if (!selectedSlotButton) {
+                showAlert('Slot Waktu Belum Dipilih', 'Mohon pilih slot waktu studio terlebih dahulu.');
+                return;
+            }
+
+            const startTime = selectedSlotButton.dataset.startTime;
+            const endTime = selectedSlotButton.dataset.endTime;
+
+            // Double check if the slot is already booked (real-time update might be slightly delayed)
+            const isAlreadyBooked = bookedStudioSlots.some(bookedSlot =>
+                bookedSlot.date === selectedDate &&
+                bookedSlot.startTime === startTime &&
+                bookedSlot.endTime === endTime &&
+                bookedSlot.status === 'booked'
+            );
+
+            if (isAlreadyBooked) {
+                showAlert('Slot Sudah Terbuka', 'Maaf, slot waktu ini sudah dipesan oleh orang lain. Silakan pilih slot lain.');
+                return;
+            }
+
+            const confirmAdd = await showAlert('Konfirmasi Booking', `Tambahkan booking studio untuk ${customerName} pada ${selectedDate}, pukul ${startTime}-${endTime}?`, true);
+
+            if (confirmAdd) {
+                const bookingItem = {
+                    name: `Sewa Studio (${selectedDate} ${startTime}-${endTime}) - ${customerName}`,
+                    price: studioPrice,
+                    quantity: 1,
+                    type: 'studio_booking',
+                    bookingDetails: { date: selectedDate, startTime: startTime, endTime: endTime, customerName: customerName }
+                };
+                addItemToCart(bookingItem);
+
+                // Mark the slot as booked immediately in local state
+                bookedStudioSlots.push({
+                    id: generateUniqueId(), // This ID will be used for cancellation
+                    date: selectedDate,
+                    startTime: startTime,
+                    endTime: endTime,
+                    customerName: customerName,
+                    status: 'booked',
+                    bookedAt: getCurrentDateTime()
+                });
+                saveToLocalStorage('bookedStudioSlots', bookedStudioSlots); // Save updated booked slots
+
+                showAlert('Berhasil', 'Booking studio berhasil ditambahkan ke keranjang!');
+                customerNameInput.value = ''; // Clear customer name
+                generateTimeSlots(); // Re-render time slots to show the newly booked slot
+                showSection('pos'); // Return to POS after booking
+            }
+        });
+
+        // --- Stock Management Logic ---
+
+        /**
+         * Renders stock inputs for drinks and accessories.
+         */
+        function renderStockInputs() {
+            drinkStockInputsContainer.innerHTML = '';
+            accessoryStockInputsContainer.innerHTML = '';
+
+            products.forEach(p => {
+                if (p.type === 'drink') {
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center justify-between';
+                    div.innerHTML = `
+                        <label class="text-gray-700 font-medium">${p.name}</label>
+                        <input type="number" id="stock-${p.name.replace(/\s+/g, '-')}" value="${stock[p.name] || 0}" min="0" class="w-24 py-2 px-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-center">
+                    `;
+                    drinkStockInputsContainer.appendChild(div);
+                } else if (p.type === 'accessory') {
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center justify-between';
+                    div.innerHTML = `
+                        <label class="text-gray-700 font-medium">${p.name}</label>
+                        <input type="number" id="stock-${p.name.replace(/\s+/g, '-')}" value="${stock[p.name] || 0}" min="0" class="w-24 py-2 px-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-center">
+                    `;
+                    accessoryStockInputsContainer.appendChild(div);
+                }
+            });
+        }
+
+        /**
+         * Updates stock based on input to localStorage.
+         */
+        updateStockButton.addEventListener('click', async () => {
+            if (!loggedInUser) {
+                showAlert('Login Diperlukan', 'Mohon login sebagai karyawan terlebih dahulu untuk memperbarui stok.');
+                return;
+            }
+            const newStock = {};
+            products.forEach(p => {
+                if (p.type === 'drink' || p.type === 'accessory') {
+                    const input = document.getElementById(`stock-${p.name.replace(/\s+/g, '-')}`);
+                    if (input) {
+                        newStock[p.name] = parseInt(input.value);
+                    }
+                }
+            });
+
+            const confirmUpdate = await showAlert('Konfirmasi Update Stok', 'Apakah Anda yakin ingin memperbarui stok?', true);
+            if (confirmUpdate) {
+                showLoading();
+                stock = newStock; // Update global stock state
+                saveToLocalStorage('stock', stock); // Save updated stock to localStorage
+                showAlert('Berhasil', 'Stok berhasil diperbarui!');
+                hideLoading();
+                renderStockInputs(); // Re-render to show updated values
+            }
+        });
+
+        // --- Reports Logic ---
+
+        /**
+         * Renders the list of transactions from localStorage data.
+         */
+        function renderTransactions() {
+            transactionListBody.innerHTML = '';
+            // Sort transactions by timestamp (descending) for display
+            transactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            if (transactions.length === 0) {
+                transactionListBody.innerHTML = `<tr><td colspan="8" class="py-4 text-center text-gray-500">Belum ada transaksi.</td></tr>`;
+                return;
+            }
+
+            transactions.forEach((trx) => {
+                const row = document.createElement('tr');
+                row.className = `border-b border-gray-200 hover:bg-gray-50 ${trx.status === 'Cancelled' ? 'bg-red-50 text-red-700 italic' : ''}`;
+                row.innerHTML = `
+                    <td class="py-3 px-6 text-left">${trx.id || 'N/A'}</td>
+                    <td class="py-3 px-6 text-left">${trx.timestamp}</td>
+                    <td class="py-3 px-6 text-left">${trx.employee}</td>
+                    <td class="py-3 px-6 text-left">
+                        <ul class="list-disc list-inside">
+                            ${trx.items.map(item => `<li>${item.name} (${item.quantity}) - ${formatRupiah(item.price * item.quantity)}</li>`).join('')}
+                        </ul>
+                    </td>
+                    <td class="py-3 px-6 text-left font-bold">${formatRupiah(trx.total)}</td>
+                    <td class="py-3 px-6 text-left">${trx.paymentMethod}</td>
+                    <td class="py-3 px-6 text-left">
+                        <span class="px-2 py-1 rounded-full text-xs font-semibold ${trx.status === 'Completed' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}">
+                            ${trx.status}
+                        </span>
+                    </td>
+                    <td class="py-3 px-6 text-center">
+                        ${trx.status === 'Completed' ? `
+                        <button class="cancel-transaction-btn text-red-500 hover:text-red-700 mr-2" data-id="${trx.id}" title="Batalkan Transaksi">
+                            <i class="fas fa-times-circle"></i>
+                        </button>
+                        ` : ''}
+                    </td>
+                `;
+                transactionListBody.appendChild(row);
+            });
+
+            // Add event listeners for cancel buttons
+            transactionListBody.querySelectorAll('.cancel-transaction-btn').forEach(button => {
+                button.addEventListener('click', async (e) => {
+                    const transactionId = e.currentTarget.dataset.id;
+                    const confirmCancel = await showAlert('Batalkan Transaksi', `Apakah Anda yakin ingin membatalkan transaksi ${transactionId}?`, true);
+                    if (confirmCancel) {
+                        cancelTransaction(transactionId);
+                    }
+                });
+            });
+        }
+
+        /**
+         * Cancels a transaction in localStorage and updates associated booked studio slots.
+         * @param {string} transactionId - ID of the transaction to cancel.
+         */
+        async function cancelTransaction(transactionId) {
+            showLoading();
+            const transactionIndex = transactions.findIndex(trx => trx.id === transactionId);
+
+            if (transactionIndex !== -1) {
+                const transactionData = transactions[transactionIndex];
+                transactionData.status = 'Cancelled'; // Update status
+
+                // If the cancelled transaction includes a studio booking, make the slot available again
+                for (const item of transactionData.items) {
+                    if (item.type === 'studio_booking' && item.bookingDetails) {
+                        const { date, startTime, endTime } = item.bookingDetails;
+                        const bookedSlotIndex = bookedStudioSlots.findIndex(slot =>
+                            slot.date === date &&
+                            slot.startTime === startTime &&
+                            slot.endTime === endTime &&
+                            slot.status === 'booked' // Ensure we only unbook currently booked slots
+                        );
+
+                        if (bookedSlotIndex !== -1) {
+                            // Check if the slot is in the past relative to current time
+                            const now = new Date();
+                            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                            const slotDateTime = new Date(`${date}T${startTime}:00`);
+
+                            if (new Date(date) < new Date(todayStr) || (new Date(date).toDateString() === now.toDateString() && slotDateTime < now)) {
+                                // If the slot is in the past, mark it as 'past_cancelled'
+                                bookedStudioSlots[bookedSlotIndex].status = 'past_cancelled';
+                            } else {
+                                // Otherwise, mark it as 'available'
+                                bookedStudioSlots[bookedSlotIndex].status = 'available';
+                            }
+                        }
+                    }
+                }
+                saveToLocalStorage('bookedStudioSlots', bookedStudioSlots); // Save updated booked slots
+                saveToLocalStorage('transactions', transactions); // Save updated transactions
+
+                showAlert('Berhasil', `Transaksi ${transactionId} berhasil dibatalkan.`);
+                renderTransactions(); // Re-render transactions list
+                generateTimeSlots(); // Re-render time slots to show availability
+            } else {
+                showAlert('Error', 'Transaksi tidak ditemukan.');
+            }
+            hideLoading();
+        }
+
+        /**
+         * Renders the list of employee attendance from localStorage data.
+         */
+        function renderAttendance() {
+            attendanceListBody.innerHTML = '';
+            // Sort attendance by loginTime (descending)
+            attendance.sort((a, b) => new Date(b.loginTime) - new Date(a.loginTime));
+
+            if (attendance.length === 0) {
+                attendanceListBody.innerHTML = `<tr><td colspan="4" class="py-4 text-center text-gray-500">Belum ada data presensi.</td></tr>`;
+                return;
+            }
+
+            attendance.forEach(att => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-200 hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="py-3 px-6 text-left">${att.name}</td>
+                    <td class="py-3 px-6 text-left">${att.loginTime}</td>
+                    <td class="py-3 px-6 text-left">${att.logoutTime || '-'}</td>
+                    <td class="py-3 px-6 text-left">${att.shift}</td>
+                `;
+                attendanceListBody.appendChild(row);
+            });
+        }
+
+        /**
+         * Exports transaction data to an Excel file.
+         */
+        exportTransactionsExcelButton.addEventListener('click', () => {
+            if (transactions.length === 0) {
+                showAlert('Tidak Ada Data', 'Tidak ada data transaksi untuk diekspor.');
+                return;
+            }
+
+            const data = transactions.map(trx => ({
+                'ID Transaksi': trx.id,
+                'Tanggal & Waktu': trx.timestamp,
+                'Karyawan': trx.employee,
+                'Item': trx.items.map(item => `${item.name} (${item.quantity})`).join(', '),
+                'Total': trx.total,
+                'Metode Pembayaran': trx.paymentMethod,
+                'Status': trx.status
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Transaksi");
+            XLSX.writeFile(wb, "Laporan_Transaksi_Gegana_Music_Studio.xlsx");
+            showAlert('Berhasil', 'Data transaksi berhasil diekspor ke Excel!');
+        });
+
+        /**
+         * Exports attendance data to an Excel file.
+         */
+        exportAttendanceExcelButton.addEventListener('click', () => {
+            if (attendance.length === 0) {
+                showAlert('Tidak Ada Data', 'Tidak ada data presensi untuk diekspor.');
+                return;
+            }
+
+            const data = attendance.map(att => ({
+                'Karyawan': att.name,
+                'Waktu Login': att.loginTime,
+                'Waktu Logout': att.logoutTime || '-',
+                'Shift': att.shift
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Presensi");
+            XLSX.writeFile(wb, "Laporan_Presensi_Gegana_Music_Studio.xlsx");
+            showAlert('Berhasil', 'Data presensi berhasil diekspor ke Excel!');
+        });
+
+        // --- Application Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Wrap initializeAppData in a try-catch to prevent initialization errors from blocking the app
+            try {
+                initializeAppData(); // Load data from localStorage
+                initializeBookingDate();
+                generateTimeSlots(); // Initial generation of time slots
+                renderCart(); // Render initial empty cart
+                showLoginPage(); // Show login page on initial load
+            } catch (error) {
+                console.error("Error during application initialization:", error);
+                showAlert('Error', 'Gagal menginisialisasi aplikasi. Silakan coba lagi.');
+                hideLoading(); // Ensure loading is hidden even on error
+            }
+        });
+    </script>
+</body>
+</html>
