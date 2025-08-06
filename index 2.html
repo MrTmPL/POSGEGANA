@@ -957,9 +957,6 @@
             if (!selectedDate) return;
 
             const now = new Date();
-            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-            const currentHour = now.getHours();
-            const currentMinute = now.getMinutes();
 
             let startTime = 11; // 11:00
             let endTime = 25; // 01:00 (next day, represented as 25:00 for calculation)
@@ -969,19 +966,11 @@
                 const endHour = i + 2;
                 const slotText = `${String(startHour).padStart(2, '0')}:00 - ${String(endHour % 24).padStart(2, '0')}:00`;
 
-                const slotDateTime = new Date(`${selectedDate}T${String(startHour).padStart(2, '0')}:00:00`);
+                // Create a Date object for the start of the current slot
+                const slotStartDateTime = new Date(`${selectedDate}T${String(startHour).padStart(2, '0')}:00:00`);
 
-                // Check if the slot is in the past relative to current time AND selected date
-                let isPast = false;
-                if (selectedDate === todayStr) {
-                    // If it's today, compare with current time
-                    if (startHour < currentHour || (startHour === currentHour && 0 < currentMinute)) { // 0 is the minute of slot start, compare with current minute
-                        isPast = true;
-                    }
-                } else if (new Date(selectedDate) < new Date(todayStr)) {
-                    // If the date itself is in the past
-                    isPast = true;
-                }
+                // Determine if the slot is in the past
+                const isPast = slotStartDateTime < now;
 
                 // Check if this slot is booked in localStorage
                 const isBooked = bookedStudioSlots.some(bookedSlot =>
@@ -1236,12 +1225,11 @@
                         );
 
                         if (bookedSlotIndex !== -1) {
-                            // Check if the slot is in the past relative to current time
+                            // Create a Date object for the start of the booked slot
                             const now = new Date();
-                            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-                            const slotDateTime = new Date(`${date}T${startTime}:00`);
+                            const slotStartDateTime = new Date(`${date}T${startTime}:00`);
 
-                            if (new Date(date) < new Date(todayStr) || (new Date(date).toDateString() === now.toDateString() && slotDateTime < now)) {
+                            if (slotStartDateTime < now) {
                                 // If the slot is in the past, mark it as 'past_cancelled'
                                 bookedStudioSlots[bookedSlotIndex].status = 'past_cancelled';
                             } else {
@@ -1340,7 +1328,9 @@
 
         // --- Application Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
-            // Wrap initializeAppData in a try-catch to prevent initialization errors from blocking the app
+            // Show loading immediately as script starts
+            document.getElementById('loading-overlay').classList.remove('hidden');
+
             try {
                 initializeAppData(); // Load data from localStorage
                 initializeBookingDate();
@@ -1350,7 +1340,8 @@
             } catch (error) {
                 console.error("Error during application initialization:", error);
                 showAlert('Error', 'Gagal menginisialisasi aplikasi. Silakan coba lagi.');
-                hideLoading(); // Ensure loading is hidden even on error
+            } finally { // Ensure hideLoading is always called
+                hideLoading(); // Ensure loading is hidden after everything is done
             }
         });
     </script>
